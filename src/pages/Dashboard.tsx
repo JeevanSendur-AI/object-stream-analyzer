@@ -166,11 +166,28 @@ const Dashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="aspect-video bg-stream-bg border border-stream-border rounded-lg flex items-center justify-center">
-                    <div className="text-center text-muted-foreground">
-                      <Video className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">Video Stream Placeholder</p>
-                      <p className="text-xs mt-1">Connect to {stream.url}</p>
+                  <div className="aspect-video bg-stream-bg border border-stream-border rounded-lg overflow-hidden">
+                    {stream.url ? (
+                      <img
+                        src={stream.url}
+                        alt={stream.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const placeholder = target.nextElementSibling as HTMLElement;
+                          if (placeholder) placeholder.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div className="w-full h-full flex items-center justify-center text-center text-muted-foreground" style={{ display: stream.url ? 'none' : 'flex' }}>
+                      <div>
+                        <Video className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Video Stream</p>
+                        <p className="text-xs mt-1">
+                          {stream.url ? `Loading ${stream.url}` : "No stream URL configured"}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
