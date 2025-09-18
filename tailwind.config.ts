@@ -47,6 +47,17 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        dashboard: {
+          DEFAULT: "hsl(var(--dashboard-bg))",
+          card: "hsl(var(--dashboard-card))",
+          accent: "hsl(var(--dashboard-accent))",
+          success: "hsl(var(--dashboard-success))",
+          warning: "hsl(var(--dashboard-warning))",
+        },
+        stream: {
+          bg: "hsl(var(--stream-bg))",
+          border: "hsl(var(--stream-border))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
