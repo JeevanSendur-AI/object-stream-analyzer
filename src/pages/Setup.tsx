@@ -1,18 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { Video, Plus, Trash2, Monitor } from "lucide-react";
 
 const Setup = () => {
   const [streams, setStreams] = useState([
-    { id: 1, url: "http://localhost:8080/video_feed", name: "Camera 1" }
+    { id: 1, url: "http://127.0.0.1:5000/video", name: "Camera 1" }
   ]);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, loading } = useAuth();
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/");
+    }
+  }, [user, loading, navigate]);
 
   const addStream = () => {
     const newId = Math.max(...streams.map(s => s.id), 0) + 1;
@@ -92,7 +101,7 @@ const Setup = () => {
                   </Label>
                   <Input
                     id={`url-${stream.id}`}
-                    placeholder="http://localhost:8080/video_feed"
+                    placeholder="http://127.0.0.1:5000/video"
                     value={stream.url}
                     onChange={(e) => updateStream(stream.id, "url", e.target.value)}
                     className="bg-input border-border"

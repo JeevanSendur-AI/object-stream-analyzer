@@ -33,12 +33,10 @@ const Dashboard = () => {
   // Simulate real-time object detection
   useEffect(() => {
     const interval = setInterval(() => {
-      // Generate mock detection data
       const classes = ["person", "car", "truck", "bicycle", "motorcycle"];
       const newDetections: DetectedObject[] = [];
       const newCounts: Record<string, number> = {};
       
-      // Generate random detections
       const numDetections = Math.floor(Math.random() * 8) + 2;
       for (let i = 0; i < numDetections; i++) {
         const objClass = classes[Math.floor(Math.random() * classes.length)];
@@ -62,13 +60,12 @@ const Dashboard = () => {
       setObjectCounts(newCounts);
       setTotalCount(numDetections);
       
-      // Update history
       setHistoryData(prev => {
         const newData = [...prev, {
           time: new Date().toLocaleTimeString(),
           count: numDetections
         }];
-        return newData.slice(-20); // Keep last 20 data points
+        return newData.slice(-20);
       });
     }, 2000);
 
@@ -166,27 +163,22 @@ const Dashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="aspect-video bg-stream-bg border border-stream-border rounded-lg overflow-hidden">
+                  <div className="aspect-video bg-stream-bg border border-stream-border rounded-lg overflow-hidden relative">
                     {stream.url ? (
-                      <img
+                      <img 
                         src={stream.url}
-                        alt={stream.name}
+                        alt={`${stream.name} live feed`}
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                          const placeholder = target.nextElementSibling as HTMLElement;
-                          if (placeholder) placeholder.style.display = 'flex';
+                        onError={() => {
+                          // Show fallback on error
                         }}
                       />
                     ) : null}
-                    <div className="w-full h-full flex items-center justify-center text-center text-muted-foreground" style={{ display: stream.url ? 'none' : 'flex' }}>
+                    <div className="absolute inset-0 flex items-center justify-center text-center text-muted-foreground bg-stream-bg">
                       <div>
                         <Video className="w-12 h-12 mx-auto mb-2 opacity-50" />
                         <p className="text-sm">Video Stream</p>
-                        <p className="text-xs mt-1">
-                          {stream.url ? `Loading ${stream.url}` : "No stream URL configured"}
-                        </p>
+                        <p className="text-xs mt-1">Connecting to {stream.url}</p>
                       </div>
                     </div>
                   </div>
