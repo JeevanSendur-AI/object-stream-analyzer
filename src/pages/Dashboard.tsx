@@ -5,14 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Video, Users, TrendingUp, Settings, LogOut, Eye, AlertCircle } from "lucide-react";
-
-interface DetectedObject {
-  id: string;
-  class: string;
-  confidence: number;
-  bbox: [number, number, number, number];
-  timestamp: number;
-}
+import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { VideoAnalyticsSidebar } from "@/components/VideoAnalyticsSidebar";
+import { useInferenceData } from "@/hooks/useInferenceData";
+import { useAuth } from "@/hooks/useAuth";
 
 interface StreamData {
   id: number;
@@ -23,54 +19,34 @@ interface StreamData {
 const Dashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const streams: StreamData[] = location.state?.streams || [];
   
-  const [detectedObjects, setDetectedObjects] = useState<DetectedObject[]>([]);
-  const [objectCounts, setObjectCounts] = useState<Record<string, number>>({});
-  const [historyData, setHistoryData] = useState<Array<{time: string, count: number}>>([]);
-  const [totalCount, setTotalCount] = useState(0);
+  const [selectedView, setSelectedView] = useState<string>("overall");
+  const { inferenceData, objectCounts, historyData } = useInferenceData(streams);
 
-  // Simulate real-time object detection
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const classes = ["person", "car", "truck", "bicycle", "motorcycle"];
-      const newDetections: DetectedObject[] = [];
-      const newCounts: Record<string, number> = {};
-      
-      const numDetections = Math.floor(Math.random() * 8) + 2;
-      for (let i = 0; i < numDetections; i++) {
-        const objClass = classes[Math.floor(Math.random() * classes.length)];
-        newCounts[objClass] = (newCounts[objClass] || 0) + 1;
-        
-        newDetections.push({
-          id: `${Date.now()}-${i}`,
-          class: objClass,
-          confidence: 0.7 + Math.random() * 0.3,
-          bbox: [
-            Math.random() * 200,
-            Math.random() * 200,
-            Math.random() * 100 + 50,
-            Math.random() * 100 + 50
-          ],
-          timestamp: Date.now()
-        });
-      }
-      
-      setDetectedObjects(newDetections);
-      setObjectCounts(newCounts);
-      setTotalCount(numDetections);
-      
-      setHistoryData(prev => {
-        const newData = [...prev, {
-          time: new Date().toLocaleTimeString(),
-          count: numDetections
-        }];
-        return newData.slice(-20);
-      });
-    }, 2000);
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/");
+  };
 
-    return () => clearInterval(interval);
-  }, []);
+  const getCurrentData = () => {
+    if (selectedView === "overall") {
+      return {
+        counts: objectCounts.overall || {},
+        history: historyData.overall || [],
+        totalCount: Object.values(objectCounts.overall || {}).reduce((sum, count) => sum + count, 0)
+      };
+    } else {
+      return {
+        counts: objectCounts[selectedView] || {},
+        history: historyData[selectedView] || [],
+        totalCount: Object.values(objectCounts[selectedView] || {}).reduce((sum, count) => sum + count, 0)
+      };
+    }
+  };
+
+  const currentData = getCurrentData();
 
   if (streams.length === 0) {
     return (
@@ -90,181 +66,191 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b border-border bg-dashboard-card">
-        <div className="flex h-16 items-center px-6 justify-between">
-          <div className="flex items-center gap-4">
-            <Video className="w-6 h-6 text-primary" />
-            <h1 className="text-xl font-semibold text-foreground">Object Detection Dashboard</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/setup")}>
-              <Settings className="w-4 h-4 mr-2" />
-              Setup
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div className="p-6 space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="bg-dashboard-card border-border">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-foreground">Total Objects</CardTitle>
-              <Eye className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-dashboard-accent">{totalCount}</div>
-              <p className="text-xs text-muted-foreground">Currently detected</p>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-dashboard-card border-border">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-foreground">Active Streams</CardTitle>
-              <Video className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-dashboard-success">{streams.length}</div>
-              <p className="text-xs text-muted-foreground">Video feeds</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-dashboard-card border-border">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-foreground">Detection Rate</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-dashboard-warning">
-                {historyData.length > 0 ? (historyData[historyData.length - 1]?.count || 0) : 0}/s
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <VideoAnalyticsSidebar 
+          streams={streams} 
+          selectedView={selectedView}
+          onViewChange={setSelectedView}
+          objectCounts={objectCounts}
+        />
+        
+        <SidebarInset className="flex-1">
+          {/* Header */}
+          <div className="border-b border-border bg-dashboard-card">
+            <div className="flex h-16 items-center px-6 justify-between">
+              <div className="flex items-center gap-4">
+                <SidebarTrigger className="mr-2" />
+                <Video className="w-6 h-6 text-primary" />
+                <h1 className="text-xl font-semibold text-foreground">
+                  Object Detection Dashboard - {selectedView === "overall" ? "Overall" : `Source ${selectedView.replace("source", "")}`}
+                </h1>
               </div>
-              <p className="text-xs text-muted-foreground">Objects per frame</p>
-            </CardContent>
-          </Card>
-        </div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={() => navigate("/setup")}>
+                  <Settings className="w-4 h-4 mr-2" />
+                  Setup
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleLogout}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </Button>
+              </div>
+            </div>
+          </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Video Streams */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground">Live Streams</h2>
-            {streams.map((stream) => (
-              <Card key={stream.id} className="bg-dashboard-card border-border">
-                <CardHeader>
-                  <CardTitle className="text-base text-foreground">{stream.name}</CardTitle>
-                  <CardDescription className="text-xs text-muted-foreground">
-                    {stream.url}
-                  </CardDescription>
+          <div className="p-6 space-y-6">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="bg-dashboard-card border-border">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-foreground">Total Objects</CardTitle>
+                  <Eye className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="aspect-video bg-stream-bg border border-stream-border rounded-lg overflow-hidden relative">
-                    {stream.url ? (
-                      <img 
-                        src={stream.url}
-                        alt={`${stream.name} live feed`}
-                        className="w-full h-full object-cover"
-                        onError={() => {
-                          // Show fallback on error
-                        }}
-                      />
-                    ) : null}
-                    <div className="absolute inset-0 flex items-center justify-center text-center text-muted-foreground bg-stream-bg">
-                      <div>
-                        <Video className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">Video Stream</p>
-                        <p className="text-xs mt-1">Connecting to {stream.url}</p>
-                      </div>
-                    </div>
-                  </div>
+                  <div className="text-2xl font-bold text-dashboard-accent">{currentData.totalCount}</div>
+                  <p className="text-xs text-muted-foreground">Currently detected</p>
                 </CardContent>
               </Card>
-            ))}
-          </div>
+              
+              <Card className="bg-dashboard-card border-border">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-foreground">Active Streams</CardTitle>
+                  <Video className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-dashboard-success">
+                    {selectedView === "overall" ? streams.length : 1}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Video feeds</p>
+                </CardContent>
+              </Card>
 
-          {/* Analytics */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground">Analytics</h2>
-            
-            {/* Object Count History */}
-            <Card className="bg-dashboard-card border-border">
-              <CardHeader>
-                <CardTitle className="text-base text-foreground">Detection History</CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  Real-time object count over time
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={historyData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis 
-                        dataKey="time" 
-                        stroke="hsl(var(--muted-foreground))"
-                        fontSize={12}
-                      />
-                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                      <Tooltip 
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--dashboard-card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "8px"
-                        }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="count" 
-                        stroke="hsl(var(--dashboard-accent))" 
-                        strokeWidth={2}
-                        dot={{ fill: "hsl(var(--dashboard-accent))", strokeWidth: 2 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+              <Card className="bg-dashboard-card border-border">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-foreground">Detection Rate</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-dashboard-warning">
+                    {currentData.history.length > 0 ? (currentData.history[currentData.history.length - 1]?.count || 0) : 0}/s
+                  </div>
+                  <p className="text-xs text-muted-foreground">Objects per frame</p>
+                </CardContent>
+              </Card>
+            </div>
 
-            {/* Current Detections */}
-            <Card className="bg-dashboard-card border-border">
-              <CardHeader>
-                <CardTitle className="text-base text-foreground">Current Detections</CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  Objects detected in the latest frame
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {Object.entries(objectCounts).map(([objClass, count]) => (
-                    <div key={objClass} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-muted-foreground" />
-                        <span className="text-sm font-medium text-foreground capitalize">
-                          {objClass}
-                        </span>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Video Streams */}
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold text-foreground">
+                  {selectedView === "overall" ? "All Live Streams" : `Stream ${selectedView.replace("source", "")}`}
+                </h2>
+                {(selectedView === "overall" ? streams : streams.filter(s => `source${s.id}` === selectedView)).map((stream) => (
+                  <Card key={stream.id} className="bg-dashboard-card border-border">
+                    <CardHeader>
+                      <CardTitle className="text-base text-foreground">{stream.name}</CardTitle>
+                      <CardDescription className="text-xs text-muted-foreground">
+                        {stream.url}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="aspect-video bg-stream-bg border border-stream-border rounded-lg overflow-hidden relative">
+                        <img 
+                          src={stream.url}
+                          alt={`${stream.name} live feed`}
+                          className="w-full h-full object-cover"
+                          style={{ maxWidth: '100%', height: 'auto' }}
+                          onError={(e) => {
+                            console.error(`Failed to load video stream: ${stream.url}`);
+                          }}
+                        />
                       </div>
-                      <Badge variant="secondary" className="bg-dashboard-accent/10 text-dashboard-accent">
-                        {count}
-                      </Badge>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Analytics */}
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold text-foreground">Analytics</h2>
+                
+                {/* Object Count History */}
+                <Card className="bg-dashboard-card border-border">
+                  <CardHeader>
+                    <CardTitle className="text-base text-foreground">Detection History</CardTitle>
+                    <CardDescription className="text-muted-foreground">
+                      Real-time object count over time
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-48">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={currentData.history}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis 
+                            dataKey="time" 
+                            stroke="hsl(var(--muted-foreground))"
+                            fontSize={12}
+                          />
+                          <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                          <Tooltip 
+                            contentStyle={{
+                              backgroundColor: "hsl(var(--dashboard-card))",
+                              border: "1px solid hsl(var(--border))",
+                              borderRadius: "8px"
+                            }}
+                          />
+                          <Line 
+                            type="monotone" 
+                            dataKey="count" 
+                            stroke="hsl(var(--dashboard-accent))" 
+                            strokeWidth={2}
+                            dot={{ fill: "hsl(var(--dashboard-accent))", strokeWidth: 2 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
                     </div>
-                  ))}
-                  {Object.keys(objectCounts).length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                      No objects detected
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
+
+                {/* Current Detections */}
+                <Card className="bg-dashboard-card border-border">
+                  <CardHeader>
+                    <CardTitle className="text-base text-foreground">Current Detections</CardTitle>
+                    <CardDescription className="text-muted-foreground">
+                      Objects detected in the latest frame
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {Object.entries(currentData.counts).map(([objClass, count]) => (
+                        <div key={objClass} className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-sm font-medium text-foreground capitalize">
+                              {objClass}
+                            </span>
+                          </div>
+                          <Badge variant="secondary" className="bg-dashboard-accent/10 text-dashboard-accent">
+                            {count}
+                          </Badge>
+                        </div>
+                      ))}
+                      {Object.keys(currentData.counts).length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          No objects detected
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </div>
-        </div>
+        </SidebarInset>
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 
