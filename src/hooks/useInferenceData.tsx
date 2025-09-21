@@ -28,13 +28,15 @@ export const useInferenceData = (streams: StreamData[]) => {
           const baseUrl = stream.url.endsWith('/video') ? stream.url.replace('/video', '') : stream.url;
           const inferenceUrl = `${baseUrl}/inference`;
           
+          console.log(`Fetching inference from: ${inferenceUrl}`);
           const response = await fetch(inferenceUrl);
           if (!response.ok) {
-            console.error(`Failed to fetch inference for stream ${stream.id}`);
+            console.error(`Failed to fetch inference for stream ${stream.id}:`, response.status, response.statusText);
             return;
           }
           
           const detections: Detection[] = await response.json();
+          console.log(`Received ${detections.length} detections for stream ${stream.id}:`, detections);
           const streamKey = `source${stream.id}`;
           
           // Update inference data
