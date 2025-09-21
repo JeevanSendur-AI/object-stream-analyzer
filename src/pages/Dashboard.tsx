@@ -157,7 +157,7 @@ const Dashboard = () => {
                     <CardContent>
                       <div className="aspect-video bg-stream-bg border border-stream-border rounded-lg overflow-hidden relative">
                         <img 
-                          src={stream.url}
+                          src={stream.url.endsWith('/video') ? stream.url : `${stream.url}/video`}
                           alt={`${stream.name} live feed`}
                           className="w-full h-full object-cover"
                           style={{ maxWidth: '100%', height: 'auto' }}

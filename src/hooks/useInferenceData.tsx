@@ -24,8 +24,8 @@ export const useInferenceData = (streams: StreamData[]) => {
     streams.forEach((stream) => {
       const interval = setInterval(async () => {
         try {
-          // Convert video URL to inference URL by replacing '/video' with '/inference'
-          const baseUrl = stream.url.replace('/video', '');
+          // Convert base URL to inference URL
+          const baseUrl = stream.url.endsWith('/video') ? stream.url.replace('/video', '') : stream.url;
           const inferenceUrl = `${baseUrl}/inference`;
           
           const response = await fetch(inferenceUrl);
