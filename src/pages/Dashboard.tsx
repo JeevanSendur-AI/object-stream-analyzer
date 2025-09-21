@@ -207,6 +207,7 @@ const Dashboard = () => {
                             stroke="hsl(var(--dashboard-accent))" 
                             strokeWidth={2}
                             dot={{ fill: "hsl(var(--dashboard-accent))", strokeWidth: 2 }}
+                            isAnimationActive={false}
                           />
                         </LineChart>
                       </ResponsiveContainer>
