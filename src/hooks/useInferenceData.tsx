@@ -79,8 +79,8 @@ export const useInferenceData = (streams: StreamData[]) => {
       intervals.push(interval);
     });
 
-    // Calculate overall statistics immediately after each stream update
-    const updateOverallStats = () => {
+    // Calculate overall statistics
+    const overallInterval = setInterval(() => {
       // Combine all stream data for overall view
       const allDetections: Detection[] = [];
       const overallCounts: Record<string, number> = {};
@@ -108,10 +108,9 @@ export const useInferenceData = (streams: StreamData[]) => {
           overall: newHistory.slice(-20)
         };
       });
-    };
+    }, 1000);
 
-    // Update overall stats whenever inference data changes
-    updateOverallStats();
+    intervals.push(overallInterval);
 
     return () => {
       intervals.forEach(interval => clearInterval(interval));
