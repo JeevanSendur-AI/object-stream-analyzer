@@ -19,8 +19,15 @@ interface StreamData {
 const Dashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, user, loading } = useAuth();
   const streams: StreamData[] = location.state?.streams || [];
+  
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate("/");
+    }
+  }, [user, loading, navigate]);
   
   const [selectedView, setSelectedView] = useState<string>("overall");
   const { inferenceData, objectCounts, historyData } = useInferenceData(streams);
