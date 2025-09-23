@@ -130,14 +130,7 @@ const Setup = () => {
           </CardContent>
         </Card>
 
-        <div className="mt-8 flex justify-between">
-          <Button 
-            variant="outline" 
-            onClick={() => navigate("/")}
-            className="border-border"
-          >
-            Back to Login
-          </Button>
+        <div className="mt-8 flex justify-end">
           <Button 
             onClick={startMonitoring}
             className="bg-primary hover:bg-primary/90 text-primary-foreground"
